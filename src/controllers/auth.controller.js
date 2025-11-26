@@ -5,18 +5,45 @@ const { JWT_SECRET } = require('../middlewares/auth.middleware');
 
 exports.register = async (req, res) => {
   try {
+    console.log('📝 Datos recibidos en registro:', req.body);
+    
     const { nombre, email, password, rol } = req.body;
     
+    // Validar campos requeridos
     if (!nombre || !email || !password) {
+      console.log('❌ Campos faltantes:', { nombre: !!nombre, email: !!email, password: !!password });
       return res.status(400).json({
         success: false,
-        message: 'Nombre, email y password son requeridos'
+        message: 'Nombre, email y password son requeridos',
+        fields: {
+          nombre: !nombre ? 'requerido' : 'ok',
+          email: !email ? 'requerido' : 'ok',
+          password: !password ? 'requerido' : 'ok'
+        }
+      });
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El formato del email no es válido'
+      });
+    }
+    
+    // Validar longitud de password
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 6 caracteres'
       });
     }
     
     // Verificar si el usuario ya existe
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
+      console.log('❌ Email ya registrado:', email);
       return res.status(400).json({
         success: false,
         message: 'El email ya está registrado'
@@ -33,6 +60,8 @@ exports.register = async (req, res) => {
       rol: rol || 'user'
     });
     
+    console.log('✅ Usuario registrado exitosamente:', user.email);
+    
     const userResponse = user.toJSON();
     delete userResponse.password;
     
@@ -42,11 +71,12 @@ exports.register = async (req, res) => {
       data: userResponse
     });
   } catch (error) {
-    console.error('Error al registrar usuario:', error);
+    console.error('❌ Error al registrar usuario:', error);
     res.status(500).json({
       success: false,
       message: 'Error al registrar usuario',
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
