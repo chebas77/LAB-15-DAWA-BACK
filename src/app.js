@@ -7,11 +7,31 @@ const authRouter = require('./routes/auth');
 const app = express();
 
 // Configurar CORS para permitir peticiones desde el frontend
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001', 
+  'http://127.0.0.1:3000',
+  'https://lab-15-dawa-front.vercel.app',
+  'https://lab-15-dawa-front-*.vercel.app' // Para preview deployments de Vercel
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+  origin: function(origin, callback) {
+    // Permitir peticiones sin origin (como mobile apps o curl)
+    if (!origin) return callback(null, true);
+    
+    // Verificar si el origin está en la lista permitida o es un deployment de Vercel
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  maxAge: 86400 // 24 horas
 }));
 
 // Middlewares
